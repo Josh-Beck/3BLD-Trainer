@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beck's 3BLD Trainer</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #f0f0f0;
+            --card-bg: #1e1e1e;
+            --accent-color: #3d3d3d;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Controls Section */
+        #controls {
+            position: absolute;
+            top: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .toggle-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .toggle-btn:hover {
+            background-color: #555;
+        }
+
+        /* Card Section - Responsive Grid/Flex */
+        #flashcard-container {
+            display: flex;
+            flex-direction: row; /* Desktop default */
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            cursor: pointer;
+            padding: 2rem;
+            background-color: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+            width: 90%;
+            max-width: 700px;
+            min-height: 250px;
+            box-sizing: border-box;
+        }
+
+        #flashcard-container:active {
+            transform: scale(0.98);
+        }
+
+        .cube-container {
+            width: 120px;
+            height: 120px;
+            flex-shrink: 0;
+            transition: opacity 0.2s;
+        }
+
+        #content-area {
+            flex-grow: 1;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0; /* Prevents flex items from overflowing */
+        }
+
+        #display-text {
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1.1;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* Fluid Typography */
+        .letter-size {
+            font-size: clamp(60px, 15vw, 120px);
+        }
+
+        .word-size {
+            font-size: clamp(24px, 6vw, 50px);
+        }
+
+        /* Visibility Classes */
+        .hidden {
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Mobile Breakpoint */
+        @media (max-width: 600px) {
+            #flashcard-container {
+                flex-direction: column; /* Cubes go Top and Bottom */
+                max-width: 320px;
+                padding: 1.5rem;
+                min-height: 450px;
+                gap: 15px;
+            }
+
+            .cube-container {
+                width: 100px;
+                height: 100px;
+            }
+            
+            #content-area {
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <button id="view-toggle" class="toggle-btn">View: Show All</button>
+    </div>
+
+    <div id="flashcard-container">
+        <!-- Left Cube -->
+        <div id="cube-left" class="cube-container"></div>
+        
+        <!-- Text Area -->
+        <div id="content-area">
+            <div id="display-text" class="letter-size">--</div>
+        </div>
+
+        <!-- Right Cube -->
+        <div id="cube-right" class="cube-container"></div>
+    </div>
+
+    <script>
+        const FLASHCARD_DATA=[
+{"letters":"BA","word":"Baaa (sheep)"},
+{"letters":"DA","word":"District Attorney"},
+{"letters":"EA","word":"EA (sports, always EA)"},
+{"letters":"FA","word":"Fanta"},
+{"letters":"GA","word":"Georgia"},
+{"letters":"HA","word":"Hidden Ability"},
+{"letters":"IA","word":"Iowa"},
+{"letters":"KA","word":"Koala"},
+{"letters":"LA","word":"Los Angeles"},
+{"letters":"NA","word":"Naan"},
+{"letters":"OA","word":"Boa Constrictor"},
+{"letters":"PA","word":"Pennsilvania"},
+{"letters":"QA","word":"QA (Aparna)"},
+{"letters":"SA","word":"South Africa"},
+{"letters":"TA","word":"Teaching Assistant (senior capstone)"},
+{"letters":"UA","word":"Univ Alabama"},
+{"letters":"VA","word":"Veterans Affairs"},
+{"letters":"WA","word":"Wawa (gas station)"},
+{"letters":"XA","word":"SHA-256 hash"},
+{"letters":"AB","word":"Abe (Lincon)"},
+{"letters":"DB","word":"Defensive Back"},
+{"letters":"EB","word":"Ebonezer scrooge"},
+{"letters":"FB","word":"Football"},
+{"letters":"GB","word":"Green Bay Packers"},
+{"letters":"HB","word":"Hubble(Tele)"},
+{"letters":"IB","word":"Ibuprofen"},
+{"letters":"KB","word":"Kabob"},
+{"letters":"LB","word":"Lab (beaker)"},
+{"letters":"NB","word":"Neebs (Always NB)"},
+{"letters":"OB","word":"Obstagoon"},
+{"letters":"PB","word":"Peanut butter"},
+{"letters":"RB","word":"Running Back"},
+{"letters":"SB","word":"Sbarro"},
+{"letters":"TB","word":"Tom Brady"},
+{"letters":"UB","word":"Umbrella"},
+{"letters":"VB","word":"Volks Beetle"},
+{"letters":"WB","word":"Web (spider)"},
+{"letters":"XB","word":"Sherbet Ice cream"},
+{"letters":"AD","word":"Admiral (Ackbar)"},
+{"letters":"BD","word":"Bird"},
+{"letters":"ED","word":"Ed edd eddy"},
+{"letters":"HD","word":"HooverDam"},
+{"letters":"ID","word":"ID (government ID, always ID)"},
+{"letters":"KD","word":"Khaled (DJ)"},
+{"letters":"LD","word":"Lid (the lid patrick)"},
+{"letters":"ND","word":"North Dakota"},
+{"letters":"OD","word":"OD (Mr Robot)"},
+{"letters":"PD","word":"Plaid(Shirt)"},
+{"letters":"QD","word":"Quid"},
+{"letters":"RD","word":"Road"},
+{"letters":"SD","word":"Seed"},
+{"letters":"TD","word":"Touchdown"},
+{"letters":"UD","word":"Udders (cow)"},
+{"letters":"VD","word":"Vod (twitch)"},
+{"letters":"WD","word":"wood"},
+{"letters":"XD","word":"Showdown (pokemon)"},
+{"letters":"AE","word":"Aeleron (Always AE)"},
+{"letters":"BE","word":"Bee"},
+{"letters":"DE","word":"Deere"},
+{"letters":"FE","word":"FedEx"},
+{"letters":"GE","word":"Geode"},
+{"letters":"HE","word":"HE (wash machine)"},
+{"letters":"IE","word":"Internet Explorer"},
+{"letters":"KE","word":"Keke Palmer"},
+{"letters":"LE","word":"Lychee (boba)"},
+{"letters":"NE","word":"NE Patriots"},
+{"letters":"OE","word":"Otitis Externa (dog ear)"},
+{"letters":"PE","word":"PE (harding gym)"},
+{"letters":"QE","word":"Queen"},
+{"letters":"SE","word":"Software Engineer (lecture)"},
+{"letters":"TE","word":"Tight End (tucker kraft)"},
+{"letters":"UE","word":"Ukelele"},
+{"letters":"VE","word":"Vector (despicable me)"},
+{"letters":"WE","word":"WWE"},
+{"letters":"XE","word":"Sheep"},
+{"letters":"AF","word":"Africa"},
+{"letters":"BF","word":"Biff (Back to future)"},
+{"letters":"EF","word":"Earmuffs"},
+{"letters":"GF","word":"Goofy"},
+{"letters":"HF","word":"Half (& half)"},
+{"letters":"KF","word":"Kafe (R6)"},
+{"letters":"LF","word":"Leaf"},
+{"letters":"NF","word":"Neff (geometry)"},
+{"letters":"OF","word":"OF"},
+{"letters":"PF","word":"Poffin (pokemon)"},
+{"letters":"QF","word":"Quaffle"},
+{"letters":"RF","word":"Coral ReeF"},
+{"letters":"SF","word":"Safe (metal)"},
+{"letters":"TF","word":"Turf (green field)"},
+{"letters":"UF","word":"UnconFerence (sas lecture)"},
+{"letters":"VF","word":"Vicious Fishes"},
+{"letters":"WF","word":"Waffle"},
+{"letters":"XF","word":"Chef"},
+{"letters":"AG","word":"AGriculture (plant)"},
+{"letters":"BG","word":"Bag (paper)"},
+{"letters":"DG","word":"Dog"},
+{"letters":"EG","word":"Eggs"},
+{"letters":"HG","word":"Huggees wipes"},
+{"letters":"IG","word":"Igloo"},
+{"letters":"KG","word":"Kg (weight)"},
+{"letters":"NG","word":"(south park episode)"},
+{"letters":"OG","word":"Olive Garden"},
+{"letters":"PG","word":"Pig"},
+{"letters":"QG","word":"Quagmire"},
+{"letters":"RG","word":"Rag (oily, old)"},
+{"letters":"SG","word":"Sage the Cat"},
+{"letters":"TG","word":"Togekiss"},
+{"letters":"UG","word":"Ugs (Always UG)"},
+{"letters":"VG","word":"VeeGees, staying alive scene from office"},
+{"letters":"WG","word":"Wig"},
+{"letters":"XG","word":"Shag (Austin Powers)"},
+{"letters":"AH","word":"Ah ha (take on me)"},
+{"letters":"BH","word":"Birch (professor pokemon)"},
+{"letters":"DH","word":"Dishes"},
+{"letters":"EH","word":"Earth"},
+{"letters":"FH","word":"Fish"},
+{"letters":"GH","word":"Graph"},
+{"letters":"IH","word":"Inch"},
+{"letters":"KH","word":"KetcHup"},
+{"letters":"LH","word":"Lunch (kennedy)"},
+{"letters":"NH","word":"Nose Hair"},
+{"letters":"OH","word":"One handed"},
+{"letters":"PH","word":"Phineas"},
+{"letters":"QH","word":"Quiche"},
+{"letters":"RH","word":"RedHat"},
+{"letters":"TH","word":"Twitch"},
+{"letters":"UH","word":"Ushers"},
+{"letters":"VH","word":"VigorotH (pokemon)"},
+{"letters":"WH","word":"Witch"},
+{"letters":"AI","word":"AI (chatgpt)"},
+{"letters":"BI","word":"Bi plane"},
+{"letters":"DI","word":"Die (dice, always DI)"},
+{"letters":"EI","word":"Emoji"},
+{"letters":"GI","word":"Ginger"},
+{"letters":"HI","word":"Hi C"},
+{"letters":"KI","word":"Kiwi"},
+{"letters":"LI","word":"Licorice"},
+{"letters":"NI","word":"Ninjask"},
+{"letters":"OI","word":"Oops Innit (ted lasso)"},
+{"letters":"PI","word":"Pie"},
+{"letters":"QI","word":"Bridge on the river qi"},
+{"letters":"RI","word":"Ragbrai"},
+{"letters":"SI","word":"Sports Illustrated"},
+{"letters":"TI","word":"TI calculator"},
+{"letters":"UI","word":"Univ Iowa"},
+{"letters":"VI","word":"Viya"},
+{"letters":"WI","word":"Wiki (pedia)"},
+{"letters":"XI","word":"Xi (chinese pres)"},
+{"letters":"BK","word":"Brenden K"},
+{"letters":"DK","word":"Donkey Kong"},
+{"letters":"EK","word":"Elk"},
+{"letters":"FK","word":"Fork"},
+{"letters":"GK","word":"Greek"},
+{"letters":"HK","word":"Hook (fishing)"},
+{"letters":"IK","word":"Ikarus"},
+{"letters":"LK","word":"Lock"},
+{"letters":"NK","word":"Nick (D)"},
+{"letters":"OK","word":"Okay"},
+{"letters":"QK","word":"Quack (duck)"},
+{"letters":"RK","word":"Rock"},
+{"letters":"SK","word":"Sock"},
+{"letters":"TK","word":"Truck"},
+{"letters":"UK","word":"United Kingdom"},
+{"letters":"WK","word":"Wok"},
+{"letters":"XK","word":"Shuck (ing corn)"},
+{"letters":"AL","word":"Al Michaels"},
+{"letters":"BL","word":"Bowl"},
+{"letters":"DL","word":"Dill (pickle)"},
+{"letters":"EL","word":"Ellis"},
+{"letters":"FL","word":"Fall (autumn leaf)"},
+{"letters":"HL","word":"Hill"},
+{"letters":"IL","word":"Illumise (pokemon)"},
+{"letters":"KL","word":"Kale (lettuce)"},
+{"letters":"NL","word":"Northern Lights"},
+{"letters":"OL","word":"Offensive Line"},
+{"letters":"PL","word":"Paul"},
+{"letters":"QL","word":"Quill (writing)"},
+{"letters":"RL","word":"Rocket League"},
+{"letters":"SL","word":"Sail"},
+{"letters":"TL","word":"Tillage"},
+{"letters":"VL","word":"Vail (skiing)"},
+{"letters":"WL","word":"Wall (ball minecraft)"},
+{"letters":"XL","word":"XL t shirt"},
+{"letters":"SM","word":"Moose"},
+{"letters":"AN","word":"Amen (prayer)"},
+{"letters":"BN","word":"Bone (always)"},
+{"letters":"DN","word":"Dan (sushi)"},
+{"letters":"EN","word":"EtherNet"},
+{"letters":"FN","word":"Fan"},
+{"letters":"GN","word":"Gun"},
+{"letters":"HN","word":"Han (solo)"},
+{"letters":"IN","word":"Indiana"},
+{"letters":"KN","word":"Gengis Khan"},
+{"letters":"LN","word":"Loon"},
+{"letters":"ON","word":"Onion"},
+{"letters":"PN","word":"Pan (stainless steel)"},
+{"letters":"RN","word":"Ron (B)"},
+{"letters":"SN","word":"Sun"},
+{"letters":"TN","word":"Tuna"},
+{"letters":"UN","word":"UnitedNation"},
+{"letters":"VN","word":"Venn diagram"},
+{"letters":"WN","word":"Wine"},
+{"letters":"XN","word":"Shin (knee)"},
+{"letters":"AO","word":"Cacao"},
+{"letters":"BO","word":"BodyOdor"},
+{"letters":"DO","word":"Disco (ball)"},
+{"letters":"EO","word":"Elmo"},
+{"letters":"FO","word":"Foul (football flag)"},
+{"letters":"GO","word":"Go (board game)"},
+{"letters":"HO","word":"Ho-oh"},
+{"letters":"IO","word":"heliolisk (pokemon)"},
+{"letters":"KO","word":"KO (wrestling)"},
+{"letters":"LO","word":"Limo"},
+{"letters":"NO","word":"New Orleans"},
+{"letters":"PO","word":"Popo (police)"},
+{"letters":"QO","word":"Quota (police)"},
+{"letters":"RO","word":"Romeo"},
+{"letters":"SO","word":"Sew"},
+{"letters":"UO","word":"Udo (SAS)"},
+{"letters":"VO","word":"Voice Over (jetlag)"},
+{"letters":"WO","word":"Waldo (Always WO)"},
+{"letters":"XO","word":"Kisses"},
+{"letters":"AP","word":"Associated Press"},
+{"letters":"BP","word":"Blimp"},
+{"letters":"DP","word":"Dude Perfect"},
+{"letters":"EP","word":"Epcot"},
+{"letters":"FP","word":"Fap"},
+{"letters":"GP","word":"GunshiP (attack of the clones)"},
+{"letters":"HP","word":"HP (computer)"},
+{"letters":"IP","word":"IP (Patent)"},
+{"letters":"LP","word":"Loop(coaster)"},
+{"letters":"NP","word":"Nipple"},
+{"letters":"OP","word":"OP (sunny side up baby labor)"},
+{"letters":"QP","word":"Quip (jack in the box)"},
+{"letters":"RP","word":"Rally Point (Building RP)"},
+{"letters":"SP","word":"Soup"},
+{"letters":"TP","word":"ToiletPaper"},
+{"letters":"UP","word":"Upper Peninsula"},
+{"letters":"VP","word":"Vice Pres (Always VP)"},
+{"letters":"WP","word":"WAP"},
+{"letters":"XP","word":"Xp (Minecraft)"},
+{"letters":"AQ","word":"AQ Shipley"},
+{"letters":"DQ","word":"Dairy Queen"},
+{"letters":"EQ","word":"EarthQuake"},
+{"letters":"FQ","word":"Fuquay"},
+{"letters":"GQ","word":"GQ magazine"},
+{"letters":"HQ","word":"Headquarters"},
+{"letters":"IQ","word":"IQ (rainbow six)"},
+{"letters":"KQ","word":"KumQuat"},
+{"letters":"LQ","word":"Liquor (whiskey cup)"},
+{"letters":"OQ","word":"Oblique"},
+{"letters":"PQ","word":"Prequel memes"},
+{"letters":"RQ","word":"Rayquaza"},
+{"letters":"SQ","word":"Squidward"},
+{"letters":"TQ","word":"Taqueria (tacos)"},
+{"letters":"UQ","word":"Ubiquitous (Tallywaggle)"},
+{"letters":"VQ","word":"Vespiquen"},
+{"letters":"WQ","word":"Waca waca (pacman)"},
+{"letters":"XQ","word":"Shaq"},
+{"letters":"BR","word":"Beer"},
+{"letters":"DR","word":"Dryer (machine)"},
+{"letters":"FR","word":"Rotom FRidge (FRost) form"},
+{"letters":"GR","word":"Gofer"},
+{"letters":"HR","word":"Hiero"},
+{"letters":"IR","word":"IR (fantasy page)"},
+{"letters":"KR","word":"Kicker"},
+{"letters":"LR","word":"LeerJet"},
+{"letters":"NR","word":"Niners"},
+{"letters":"OR","word":"Oregon"},
+{"letters":"PR","word":"Pull Request"},
+{"letters":"QR","word":"Queer"},
+{"letters":"SR","word":"Soarin (disney)"},
+{"letters":"TR","word":"Tree"},
+{"letters":"UR","word":"Urine"},
+{"letters":"VR","word":"VR goggles"},
+{"letters":"WR","word":"War (never changes)"},
+{"letters":"XR","word":"Shears minecraft"},
+{"letters":"AS","word":"ass"},
+{"letters":"BS","word":"Bullsh(card)"},
+{"letters":"DS","word":"DS"},
+{"letters":"ES","word":"Espresso"},
+{"letters":"FS","word":"Foosball"},
+{"letters":"GS","word":"Gary Sharp"},
+{"letters":"IS","word":"International Space station"},
+{"letters":"KS","word":"Kiss (band)"},
+{"letters":"LS","word":"Lapis Lazuli"},
+{"letters":"NS","word":"Noose"},
+{"letters":"OS","word":"Ostrich"},
+{"letters":"PS","word":"PS (end of letter)"},
+{"letters":"QS","word":"Quiznos"},
+{"letters":"RS","word":"RegiSteel"},
+{"letters":"TS","word":"ToyStory"},
+{"letters":"US","word":"USA"},
+{"letters":"VS","word":"Vase (ornate)"},
+{"letters":"WS","word":"Wes (ninja coach)"},
+{"letters":"XS","word":"Cross (X with S, always XS)"},
+{"letters":"AT","word":"AT-AT"},
+{"letters":"BT","word":"Bat"},
+{"letters":"DT","word":"Donut"},
+{"letters":"ET","word":"ET (alien)"},
+{"letters":"FT","word":"Foot/ feet"},
+{"letters":"GT","word":"Mustang GT"},
+{"letters":"HT","word":"Hat (top hat)"},
+{"letters":"IT","word":"IT (scary clown)"},
+{"letters":"KT","word":"Kite (shield)"},
+{"letters":"LT","word":"Light (bulb)"},
+{"letters":"NT","word":"Nut (acorn)"},
+{"letters":"PT","word":"Potty"},
+{"letters":"QT","word":"qqTimer"},
+{"letters":"RT","word":"Rat"},
+{"letters":"ST","word":"Satellite"},
+{"letters":"UT","word":"Univ Texas"},
+{"letters":"VT","word":"Vet (academy east)"},
+{"letters":"XT","word":"Xray Toe"},
+{"letters":"AU","word":"Australia"},
+{"letters":"BU","word":"BYU"},
+{"letters":"DU","word":"Deployable unit"},
+{"letters":"EU","word":"European Union"},
+{"letters":"FU","word":"FUUTURE"},
+{"letters":"GU","word":"Gauze (always GU)"},
+{"letters":"HU","word":"HuHot"},
+{"letters":"IU","word":"IU (Indiana univ hoosers)"},
+{"letters":"KU","word":"Kansas University"},
+{"letters":"NU","word":"Nun"},
+{"letters":"OU","word":"OU (pokemmo)"},
+{"letters":"PU","word":"Putin"},
+{"letters":"QU","word":"Queue (roller coaster tycoon)"},
+{"letters":"RU","word":"Russia"},
+{"letters":"SU","word":"Susan B"},
+{"letters":"TU","word":"Tulsa"},
+{"letters":"VU","word":"Vue (coding)"},
+{"letters":"WU","word":"Wooper"},
+{"letters":"XU","word":"Zoo"},
+{"letters":"AV","word":"Avis (car rental)"},
+{"letters":"BV","word":"Beaver"},
+{"letters":"DV","word":"Dive (pokemon)"},
+{"letters":"EV","word":"Eevee"},
+{"letters":"FV","word":"Favor (age of mythology)"},
+{"letters":"GV","word":"Gravy"},
+{"letters":"HV","word":"Hive (BeeHive)"},
+{"letters":"IV","word":"IV (hospital)"},
+{"letters":"LV","word":"Lourve"},
+{"letters":"NV","word":"Nevada"},
+{"letters":"OV","word":"Oven"},
+{"letters":"PV","word":"Passover (lamb door, always PV)"},
+{"letters":"QV","word":"Quiver (arrows)"},
+{"letters":"RV","word":"Rivian"},
+{"letters":"SV","word":"Scarlet & Violet"},
+{"letters":"TV","word":"Tavern (Indiana Jones)"},
+{"letters":"UV","word":"UV Sunglasses"},
+{"letters":"WV","word":"Wave (ocean)"},
+{"letters":"XV","word":"Shave"},
+{"letters":"AW","word":"A&W rootbeer"},
+{"letters":"BW","word":"Bow&Arrow"},
+{"letters":"DW","word":"DW (arthur character)"},
+{"letters":"EW","word":"Ewan McGregor (Obi Wan)"},
+{"letters":"FW","word":"Flowette (eternal flower)"},
+{"letters":"GW","word":"Gown"},
+{"letters":"HW","word":"Howee Mandell"},
+{"letters":"IW","word":"Inchworm"},
+{"letters":"KW","word":"Kowtow (Cleave, pokemon)"},
+{"letters":"LW","word":"Low (apple bottom jeans)"},
+{"letters":"NW","word":"Northwest (Luis univ)"},
+{"letters":"OW","word":"Owl (Always OW)"},
+{"letters":"PW","word":"Pris of War"},
+{"letters":"QW","word":"Qwerty"},
+{"letters":"RW","word":"Row (canoe)"},
+{"letters":"SW","word":"Saw"},
+{"letters":"UW","word":"Univ Washington"},
+{"letters":"VW","word":"Vows (wedding)"},
+{"letters":"XW","word":"Shadow"},
+{"letters":"AX","word":"Axe"},
+{"letters":"BX","word":"Box"},
+{"letters":"DX","word":"Deoxys"},
+{"letters":"EX","word":"EX (pokemon cards)"},
+{"letters":"FX","word":"Fox"},
+{"letters":"GX","word":"Galaxy"},
+{"letters":"IX","word":"Nine (roman numeral)"},
+{"letters":"KX","word":"Kicks (jordans shoes)"},
+{"letters":"LX","word":"snorLaX"},
+{"letters":"NX","word":"Bo Nix"},
+{"letters":"OX","word":"Ox"},
+{"letters":"PX","word":"Pyrex"},
+{"letters":"QX","word":"Quaxly (pokemon)"},
+{"letters":"RX","word":"RX (pharmacy)"},
+{"letters":"SX","word":"Sx (SX always)"},
+{"letters":"TX","word":"Texas"},
+{"letters":"UX","word":"Uxie"},
+{"letters":"VX","word":"Vox (YouTube)"},
+{"letters":"WX","word":"Wax"}];
+
+        const COLORS = {
+            white: "#FFFFFF",
+            orange: "#FF8C00",
+            blue: "#0000FF",
+            red: "#FF0000",
+            green: "#008000",
+            yellow: "#FFFF00"
+        };
+
+        const CUBE_MAP = {
+            "A": { top: COLORS.white, right: COLORS.orange, left: COLORS.blue },
+            "B": { top: COLORS.white, right: COLORS.blue, left: COLORS.red },
+            "C": { top: COLORS.white, right: COLORS.red, left: COLORS.green },
+            "D": { top: COLORS.white, right: COLORS.green, left: COLORS.orange },
+            "U": { top: COLORS.yellow, right: COLORS.orange, left: COLORS.green },
+            "V": { top: COLORS.yellow, right: COLORS.green, left: COLORS.red },
+            "W": { top: COLORS.yellow, right: COLORS.red, left: COLORS.blue },
+            "X": { top: COLORS.yellow, right: COLORS.blue, left: COLORS.orange },
+            "I": { top: COLORS.green, right: COLORS.white, left: COLORS.orange },
+            "J": { top: COLORS.green, right: COLORS.red, left: COLORS.white },
+            "K": { top: COLORS.green, right: COLORS.red, left: COLORS.yellow },
+            "L": { top: COLORS.green, right: COLORS.yellow, left: COLORS.orange },
+            "Q": { top: COLORS.blue, right: COLORS.red, left: COLORS.white },
+            "R": { top: COLORS.blue, right: COLORS.white, left: COLORS.orange },
+            "S": { top: COLORS.blue, right: COLORS.orange, left: COLORS.yellow },
+            "T": { top: COLORS.blue, right: COLORS.yellow, left: COLORS.red },
+            "E": { top: COLORS.orange, right: COLORS.blue, left: COLORS.white },
+            "F": { top: COLORS.orange, right: COLORS.white, left: COLORS.green },
+            "G": { top: COLORS.orange, right: COLORS.green, left: COLORS.yellow },
+            "H": { top: COLORS.orange, right: COLORS.yellow, left: COLORS.blue },
+            "M": { top: COLORS.red, right: COLORS.green, left: COLORS.white },
+            "N": { top: COLORS.red, right: COLORS.white, left: COLORS.blue },
+            "O": { top: COLORS.red, right: COLORS.blue, left: COLORS.yellow },
+            "P": { top: COLORS.red, right: COLORS.yellow, left: COLORS.green }
+        };
+
+        const DEFAULT_COLORS = { top: "#444", right: "#333", left: "#222" };
+
+        /**
+         * STATE MANAGEMENT
+         */
+        let currentIndex = 0;
+        let isShowingWord = false;
+        
+        let viewMode = 0; 
+        const viewModes = ["Show All", "Hide Letters", "Hide Cubes"];
+
+        const container = document.getElementById('flashcard-container');
+        const textDisplay = document.getElementById('display-text');
+        const cubeLeft = document.getElementById('cube-left');
+        const cubeRight = document.getElementById('cube-right');
+        const toggleBtn = document.getElementById('view-toggle');
+
+        function createCubeSVG(colors) {
+            return `
+                <svg viewBox="0 0 100 100">
+                    <path d="M50 10 L85 30 L50 50 L15 30 Z" fill="${colors.top}" />
+                    <path d="M15 30 L50 50 L50 90 L15 70 Z" fill="${colors.left}" />
+                    <path d="M85 30 L85 70 L50 90 L50 50 Z" fill="${colors.right}" />
+                </svg>
+            `;
+        }
+
+        function updateDisplay() {
+            const data = FLASHCARD_DATA[currentIndex];
+            const letter1 = data.letters[0];
+            const letter2 = data.letters[1];
+
+            // Update Cubes
+            cubeLeft.innerHTML = createCubeSVG(CUBE_MAP[letter1] || DEFAULT_COLORS);
+            cubeRight.innerHTML = createCubeSVG(CUBE_MAP[letter2] || DEFAULT_COLORS);
+
+            // Handle Text Content and Visibility
+            if (isShowingWord) {
+                textDisplay.textContent = data.word;
+                textDisplay.className = 'word-size';
+                textDisplay.classList.remove('hidden');
+            } else {
+                textDisplay.textContent = data.letters;
+                textDisplay.className = 'letter-size';
+                
+                // Immediate hide if in mode 1
+                if (viewMode === 1) {
+                    textDisplay.classList.add('hidden');
+                } else {
+                    textDisplay.classList.remove('hidden');
+                }
+            }
+
+            // Handle Cubes Visibility
+            if (viewMode === 2) {
+                cubeLeft.classList.add('hidden');
+                cubeRight.classList.add('hidden');
+            } else {
+                cubeLeft.classList.remove('hidden');
+                cubeRight.classList.remove('hidden');
+            }
+        }
+
+        function handleClick() {
+            // Update state before calling updateDisplay
+            if (!isShowingWord) {
+                isShowingWord = true;
+            } else {
+                isShowingWord = false;
+                // Pull from the list randomly
+                currentIndex = Math.floor(Math.random() * FLASHCARD_DATA.length);
+            }
+            // All DOM changes happen inside updateDisplay synchronously
+            updateDisplay();
+        }
+
+        function toggleView() {
+            viewMode = (viewMode + 1) % 3;
+            toggleBtn.textContent = `View: ${viewModes[viewMode]}`;
+            updateDisplay();
+        }
+
+        // Initialize
+        container.addEventListener('click', handleClick);
+        toggleBtn.addEventListener('click', toggleView);
+        updateDisplay();
+
+    </script>
+</body>
+</html>
