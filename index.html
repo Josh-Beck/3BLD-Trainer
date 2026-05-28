@@ -592,21 +592,23 @@
 
         const DEFAULT_COLORS = { top: "#444", right: "#333", left: "#222" };
 
-        /**
+       /**
          * STATE MANAGEMENT
          */
-        let currentIndex = 0;
         let isShowingWord = false;
-        
         let viewMode = 0; 
         const viewModes = ["Show All", "Hide Letters", "Hide Cubes"];
-
+        
+        let currentQueue = [];       // Holds our active 20-item list
+        let queueIndex = -1;         // Tracks our current index within the 20-item queue
+        let currentFlashcard = null; // Holds the active flashcard object
+        
         const container = document.getElementById('flashcard-container');
         const textDisplay = document.getElementById('display-text');
         const cubeLeft = document.getElementById('cube-left');
         const cubeRight = document.getElementById('cube-right');
         const toggleBtn = document.getElementById('view-toggle');
-
+        
         function createCubeSVG(colors) {
             return `
                 <svg viewBox="0 0 100 100">
@@ -616,16 +618,19 @@
                 </svg>
             `;
         }
-
+        
         function updateDisplay() {
-            const data = FLASHCARD_DATA[currentIndex];
+            // Use the current flashcard from our queue, falling back to the first item if not yet set
+            const data = currentFlashcard || (typeof FLASHCARD_DATA !== 'undefined' && FLASHCARD_DATA[0]);
+            if (!data) return;
+        
             const letter1 = data.letters[0];
             const letter2 = data.letters[1];
-
+        
             // Update Cubes
             cubeLeft.innerHTML = createCubeSVG(CUBE_MAP[letter1] || DEFAULT_COLORS);
             cubeRight.innerHTML = createCubeSVG(CUBE_MAP[letter2] || DEFAULT_COLORS);
-
+        
             // Handle Text Content and Visibility
             if (isShowingWord) {
                 textDisplay.textContent = data.word;
@@ -642,7 +647,7 @@
                     textDisplay.classList.remove('hidden');
                 }
             }
-
+        
             // Handle Cubes Visibility
             if (viewMode === 2) {
                 cubeLeft.classList.add('hidden');
@@ -653,19 +658,13 @@
             }
         }
         
-        // --- State variables to add/replace in your global scope ---
-        let isShowingWord = true; // Or false, depending on your initial state
-        let currentQueue = [];    // Holds our active 20-item list
-        let queueIndex = -1;      // Tracks our current index within the 20-item queue
-        let currentFlashcard = null; // Holds the active flashcard object
-        
         /**
          * Generates a fresh queue of 20 items:
          * - Selects 10 random items from FLASHCARD_DATA (without duplicate indices)
          * - Repeats those same 10 items to form a list of 20
          */
         function regenerateQueue() {
-            if (!FLASHCARD_DATA || FLASHCARD_DATA.length === 0) return;
+            if (typeof FLASHCARD_DATA === 'undefined' || FLASHCARD_DATA.length === 0) return;
         
             // 1. Pick 10 random items from the dataset
             const selectedTen = [];
@@ -681,7 +680,6 @@
             }
         
             // 2. Repeat the list of 10 to create a 20-item list
-            // (If dataset was smaller than 10, it repeats whatever we grabbed)
             currentQueue = [...selectedTen, ...selectedTen];
             queueIndex = 0; // Reset queue pointer back to the start
         }
@@ -700,6 +698,7 @@
                 if (currentQueue.length === 0 || queueIndex >= currentQueue.length) {
                     regenerateQueue();
                 }
+        
                 // Pull the next item sequentially from our pre-shuffled queue
                 currentFlashcard = currentQueue[queueIndex];
                 // Move to the next index for the subsequent cycle
@@ -709,20 +708,25 @@
             updateDisplay();
         }
         
-        // --- Initialization ---
-        // Ensure we build our initial queue when the application loads
-
-
         function toggleView() {
             viewMode = (viewMode + 1) % 3;
             toggleBtn.textContent = `View: ${viewModes[viewMode]}`;
             updateDisplay();
         }
-
+        
         // Initialize
         container.addEventListener('click', handleClick);
         toggleBtn.addEventListener('click', toggleView);
+        
+        // Build initial queue
         regenerateQueue();
+        
+        // Prepare the very first card immediately
+        if (currentQueue.length > 0) {
+            currentFlashcard = currentQueue[queueIndex];
+            queueIndex++;
+        }
+        
         updateDisplay();
 
     </script>
