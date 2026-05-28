@@ -652,19 +652,66 @@
                 cubeRight.classList.remove('hidden');
             }
         }
-
+        
+        // --- State variables to add/replace in your global scope ---
+        let isShowingWord = true; // Or false, depending on your initial state
+        let currentQueue = [];    // Holds our active 20-item list
+        let queueIndex = -1;      // Tracks our current index within the 20-item queue
+        let currentFlashcard = null; // Holds the active flashcard object
+        
+        /**
+         * Generates a fresh queue of 20 items:
+         * - Selects 10 random items from FLASHCARD_DATA (without duplicate indices)
+         * - Repeats those same 10 items to form a list of 20
+         */
+        function regenerateQueue() {
+            if (!FLASHCARD_DATA || FLASHCARD_DATA.length === 0) return;
+        
+            // 1. Pick 10 random items from the dataset
+            const selectedTen = [];
+            const availableIndices = Array.from({ length: FLASHCARD_DATA.length }, (_, i) => i);
+        
+            // If FLASHCARD_DATA has fewer than 10 items, we just use all of them
+            const itemsToPick = Math.min(10, FLASHCARD_DATA.length);
+        
+            for (let i = 0; i < itemsToPick; i++) {
+                const randomIndex = Math.floor(Math.random() * availableIndices.length);
+                const dataIndex = availableIndices.splice(randomIndex, 1)[0];
+                selectedTen.push(FLASHCARD_DATA[dataIndex]);
+            }
+        
+            // 2. Repeat the list of 10 to create a 20-item list
+            // (If dataset was smaller than 10, it repeats whatever we grabbed)
+            currentQueue = [...selectedTen, ...selectedTen];
+            queueIndex = 0; // Reset queue pointer back to the start
+        }
+        
+        /**
+         * Adjusted click handler
+         */
         function handleClick() {
-            // Update state before calling updateDisplay
+            // Toggle state before calling updateDisplay
             if (!isShowingWord) {
                 isShowingWord = true;
             } else {
                 isShowingWord = false;
-                // Pull from the list randomly
-                currentIndex = Math.floor(Math.random() * FLASHCARD_DATA.length);
+        
+                // If the queue is empty or we have exhausted all 20 items, generate a new batch
+                if (currentQueue.length === 0 || queueIndex >= currentQueue.length) {
+                    regenerateQueue();
+                }
+                // Pull the next item sequentially from our pre-shuffled queue
+                currentFlashcard = currentQueue[queueIndex];
+                // Move to the next index for the subsequent cycle
+                queueIndex++;
             }
             // All DOM changes happen inside updateDisplay synchronously
             updateDisplay();
         }
+        
+        // --- Initialization ---
+        // Ensure we build our initial queue when the application loads
+
 
         function toggleView() {
             viewMode = (viewMode + 1) % 3;
@@ -675,6 +722,7 @@
         // Initialize
         container.addEventListener('click', handleClick);
         toggleBtn.addEventListener('click', toggleView);
+        regenerateQueue();
         updateDisplay();
 
     </script>
